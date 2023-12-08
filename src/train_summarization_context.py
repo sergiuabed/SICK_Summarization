@@ -2,6 +2,10 @@ import os
 os.environ['WANDB_SILENT']="true"
 
 import sys
+sys.path.append('.')
+sys.path.append('./data')
+
+import sys
 sys.path.append('../')
 import argparse
 import random
