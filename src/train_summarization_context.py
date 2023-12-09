@@ -3,7 +3,7 @@ os.environ['WANDB_SILENT']="true"
 
 import sys
 sys.path.append('.')
-sys.path.append('./data')
+sys.path.append('../data')
 
 import sys
 sys.path.append('../')
