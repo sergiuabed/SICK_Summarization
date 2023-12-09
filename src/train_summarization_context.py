@@ -75,7 +75,7 @@ print('######################################################################')
 
 
 # Start WANDB Log (Set Logging API)
-wandb.init(project="ICSK4AS", reinit=True, entity='icsk4as')
+wandb.init(project="ICSK4AS", reinit=True, entity='s295149')
 if args.use_paracomet:
     cs = "para"
     if args.use_roberta:
