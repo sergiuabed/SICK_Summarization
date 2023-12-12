@@ -310,8 +310,9 @@ class SamsumDataset_total:
         self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
     
     def getTrainData(self):
-        return self.train_dataset
-    
+        #return self.train_dataset
+        return self.eval_dataset
+
     def getEvalData(self):
         return self.eval_dataset
 
