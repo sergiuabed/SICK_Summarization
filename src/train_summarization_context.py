@@ -104,7 +104,8 @@ model_checkpoint_list = [
     "google/pegasus-large",
     "google/peagsus-xsum",
     "google/t5-large-lm-adapt", 
-    "google/t5-v1_1-large"
+    "google/t5-v1_1-large",
+    "google-t5/t5-small"
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -112,7 +113,8 @@ tokenizer_list = {
     "google/pegasus-large":"PegasusTokenizer",
     "google/peagsus-xsum":"PegasusTokenizer",
     "google/t5-large-lm-adapt":"T5Tokenizer", 
-    "google/t5-v1_1-large":"T5Tokenizer"
+    "google/t5-v1_1-large":"T5Tokenizer",
+    "google-t5/t5-small":"T5Tokenizer"
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -120,7 +122,8 @@ max_len_list ={
     "google/pegasus-large":1024,
     "google/peagsus-xsum":512,
     "google/t5-large-lm-adapt":512, 
-    "google/t5-v1_1-large":512
+    "google/t5-v1_1-large":512,
+    "google-t5/t5-small":512
 }
 vocab_size_list={
     "facebook/bart-large":50265,
@@ -128,7 +131,8 @@ vocab_size_list={
     "google/pegasus-large":96103,
     "google/peagsus-xsum":96103,
     "google/t5-large-lm-adapt":32128, 
-    "google/t5-v1_1-large":32128
+    "google/t5-v1_1-large":32128,
+    "google-t5/t5-small":32128
 }
 dataset_list = [
     "samsum","dialogsum"
