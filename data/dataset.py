@@ -17,7 +17,7 @@ def append_prefix_dialogues(examples):
     '''
 
     prefix = "summarize: "
-    prefixed_dialogues = [prefix + doc for doc in examples["dialogue"]]
+    prefixed_dialogues = [prefix + doc["dialogue"] for doc in examples]
 
     return prefixed_dialogues
 
