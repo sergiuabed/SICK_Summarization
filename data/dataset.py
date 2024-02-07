@@ -10,13 +10,22 @@ import spacy
 import re
 import random
 
+def append_prefix_dialogues(examples):
+    '''
+    T5 models deduce the task they have to perform from the prefix of
+    the input text.
+    '''
 
+    prefix = "summarize: "
+    prefixed_dialogues = [prefix + doc for doc in examples["dialogue"]]
+
+    return prefixed_dialogues
 
 class SamsumDataset(Dataset):
     def __init__(self, encoder_max_len, decoder_max_len, split_type, 
                  tokenizer, extra_context=False, extra_supervision=False, 
                  paracomet=False,relation = "xReason", supervision_relation="xIntent", 
-                 roberta=False, sentence_transformer=False):
+                 roberta=False, sentence_transformer=False, isT5=False):
         self.encoder_max_len = encoder_max_len
         self.decoder_max_len = decoder_max_len
         self.split_type = split_type
@@ -41,6 +50,12 @@ class SamsumDataset(Dataset):
         
         self.data = load_dataset('samsum',split=split_type)
         self.dialogue = self.data['dialogue']
+
+        if isT5 is True:
+            # T5 models need in the input text a prefix specifying the
+            # name of the task. In our case, prefix='summarize: '
+            self.dialogue = append_prefix_dialogues(self.dialogue)
+
         self.summary = self.data['summary']
         self.id = self.data['id']
 
