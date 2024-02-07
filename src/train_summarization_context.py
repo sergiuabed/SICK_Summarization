@@ -161,10 +161,11 @@ tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 special_tokens_dict = {'additional_special_tokens':['<I>','</I>']}
 tokenizer.add_special_tokens(special_tokens_dict)
 
+isT5 = True if args.model_name == "google-t5/t5-small" else False
 
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer, isT5=isT5)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()

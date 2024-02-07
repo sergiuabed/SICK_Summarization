@@ -54,6 +54,8 @@ class SamsumDataset(Dataset):
         if isT5 is True:
             # T5 models need in the input text a prefix specifying the
             # name of the task. In our case, prefix='summarize: '
+            print("Preparing dataset for T5 model")
+
             self.dialogue = append_prefix_dialogues(self.dialogue)
 
         self.summary = self.data['summary']
@@ -319,10 +321,10 @@ class SamsumDataset_total:
     def __init__(self, encoder_max_len, decoder_max_len, tokenizer, 
                  extra_context=False, extra_supervision=False, paracomet=False,
                  relation="xReason", supervision_relation='isAfter',
-                 roberta=False, sentence_transformer=False):
-        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
-        self.eval_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
-        self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
+                 roberta=False, sentence_transformer=False, isT5=False):
+        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5)
+        self.eval_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5)
+        self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5)
     
     def getTrainData(self):
         return self.train_dataset
