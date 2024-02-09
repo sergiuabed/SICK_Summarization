@@ -200,6 +200,9 @@ finetune_model.resize_token_embeddings(len(tokenizer))
 finetune_model.gradient_checkpointing_enable()
 finetune_model = finetune_model.to(device)
 
+print(f"Train batch size: {args.train_batch_size}")
+print(f"Learning rate: {args.init_lr}")
+print(f"Scheduler: {args.lr_scheduler_type}")
 
 # Set Training Arguments (& Connect to WANDB)
 finetune_args = Seq2SeqTrainingArguments(
