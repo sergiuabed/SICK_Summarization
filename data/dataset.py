@@ -126,7 +126,7 @@ class SamsumDataset(Dataset):
         # self.low_res = random.sample(total,self.data_len/10)
         # print(self.low_res)
 
-    def process_media_msg(self,sentence, person, commonsense):
+    def process_media_msg_old(self,sentence, person, commonsense):
         # print(person)
         if ('<file_photo>' in sentence) or ('<photo_file>' in sentence) or ('<file_picture>' in sentence):
             return "<I> " + person + " sent a photo. </I>" + '\n' 
@@ -146,6 +146,25 @@ class SamsumDataset(Dataset):
             else:
                 return "" 
 
+    def process_media_msg(self,sentence, person, commonsense):
+        # print(person)
+        if ('<file_photo>' in sentence) or ('<photo_file>' in sentence) or ('<file_picture>' in sentence):
+            return person + " sent a photo." + '\n' 
+        elif ('<video>' in sentence) or ('<file_video>' in sentence):
+            return person + " sent a video." + '\n'
+        elif '<file_gif>' in sentence:
+            return person + " sent a file." + '\n'
+        elif ('<file_other>' in sentence) or ('<file_others>' in sentence):
+            return person + " sent a file." + '\n'
+        elif ('<link>' in sentence) or ('<file_link>' in sentence):
+            return person + " sent a link." + '\n'
+        elif '<location>' in sentence:
+            return person + " sent a location." + '\n'
+        else:
+            if commonsense.strip() != 'none':
+                return commonsense.strip() + "." + '\n'
+            else:
+                return ""
 
     def __len__(self):
         return self.data_len
