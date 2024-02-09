@@ -161,8 +161,8 @@ metric = load_metric("../utils/rouge.py")
 tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
 # Add special token 
-#special_tokens_dict = {'additional_special_tokens':['<I>','</I>']}
-#tokenizer.add_special_tokens(special_tokens_dict)
+special_tokens_dict = {'additional_special_tokens':['<I>','</I>']}
+tokenizer.add_special_tokens(special_tokens_dict)
 
 isT5 = True if args.model_name == "google-t5/t5-small" else False
 
