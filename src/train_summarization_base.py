@@ -73,7 +73,7 @@ print('######################################################################')
 
 
 # Start WANDB Log (Set Logging API)
-wandb.init(project="ICSK4AS", reinit=True, entity='icsk4as')
+wandb.init(project="ICSK4AS", reinit=True, entity='s295149')
 wandb.run.name = f"base_{args.dataset_name}_{'para' if args.use_paracomet else ''}_lr{str(args.init_lr)}"
 
 # Define Global Values
@@ -133,9 +133,11 @@ tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 if args.model_name == 'microsoft/DialoGPT-small':
     tokenizer.add_special_tokens({'pad_token':tokenizer.eos_token})
 
+isT5 = True if args.model_name == "google-t5/t5-small" else False
+
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
@@ -219,7 +221,7 @@ finetune_args = Seq2SeqTrainingArguments(
     save_strategy= "epoch",
     #save_steps=args.display_step,
     save_total_limit=1,
-    fp16=True,
+    fp16=False,#True,
     seed = 42,
     load_best_model_at_end=True,
     predict_with_generate=True,
@@ -233,7 +235,11 @@ finetune_args = Seq2SeqTrainingArguments(
 
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
+
+    # Replace -100 in the predictions as we can't decode them.
+    predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
