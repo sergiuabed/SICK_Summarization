@@ -46,6 +46,7 @@ parser.add_argument('--adam_eps',type=float, default=1e-12)
 parser.add_argument('--dropout_rate',type=float, default=0.1)
 
 parser.add_argument('--lr_scheduler_type',type=str, default="polynomial")
+parser.add_argument('--gradient_accumulation_steps',type=int, default=2)
 
 # Tokenizer hyperparameters
 parser.add_argument('--encoder_max_len', type=int, default=1024)
@@ -258,7 +259,7 @@ finetune_args = Seq2SeqTrainingArguments(
     num_train_epochs=args.epoch,
     max_grad_norm=0.1,
     #label_smoothing_factor=0.1,
-    gradient_accumulation_steps=2,
+    gradient_accumulation_steps=args.gradient_accumulation_steps,#2,
     gradient_checkpointing=True,
     # max_steps= ,
     lr_scheduler_type=args.lr_scheduler_type,#'polynomial',
