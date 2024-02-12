@@ -311,28 +311,37 @@ def preprocess_logits_for_metrics(logits, labels):
 
     return logits_reduced
 
-if args.model_name in ['microsoft/DialoGPT-small','google/pegasus-large','facebook/bart-large']:
-    finetune_trainer = DialoGPTTrainer(
-        model = finetune_model,
-        args = finetune_args,
-        train_dataset = train_dataset,
-        eval_dataset = eval_dataset,
-        tokenizer = tokenizer,
-        compute_metrics=compute_metrics,
-        #preprocess_logits_for_metrics=preprocess_logits_for_metrics
-    )
+#if args.model_name in ['microsoft/DialoGPT-small','google/pegasus-large','facebook/bart-large']:
+#    finetune_trainer = DialoGPTTrainer(
+#        model = finetune_model,
+#        args = finetune_args,
+#        train_dataset = train_dataset,
+#        eval_dataset = eval_dataset,
+#        tokenizer = tokenizer,
+#        compute_metrics=compute_metrics,
+#        #preprocess_logits_for_metrics=preprocess_logits_for_metrics
+#    )
+#
+#else:
+#    finetune_trainer = Seq2SeqTrainer(
+#        model = finetune_model,
+#        args = finetune_args,
+#        train_dataset = train_dataset,
+#        eval_dataset = eval_dataset,
+#        tokenizer = tokenizer,
+#        compute_metrics=compute_metrics,
+#        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+#    )
 
-else:
-    finetune_trainer = Seq2SeqTrainer(
-        model = finetune_model,
-        args = finetune_args,
-        train_dataset = train_dataset,
-        eval_dataset = eval_dataset,
-        tokenizer = tokenizer,
-        compute_metrics=compute_metrics,
-        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
-    )
-
+finetune_trainer = Seq2SeqTrainer(
+    model = finetune_model,
+    args = finetune_args,
+    train_dataset = train_dataset,
+    eval_dataset = eval_dataset,
+    tokenizer = tokenizer,
+    compute_metrics=compute_metrics,
+    # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+)
 
 # Run Training (Finetuning)
 finetune_trainer.train()
