@@ -109,7 +109,8 @@ model_checkpoint_list = [
     "google/peagsus-xsum",
     "google/t5-large-lm-adapt", 
     "google/t5-v1_1-large",
-    "google-t5/t5-small"
+    "google-t5/t5-small",
+    "facebook/bart-base" #newly added
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -118,7 +119,8 @@ tokenizer_list = {
     "google/peagsus-xsum":"PegasusTokenizer",
     "google/t5-large-lm-adapt":"T5Tokenizer", 
     "google/t5-v1_1-large":"T5Tokenizer",
-    "google-t5/t5-small":"T5Tokenizer"
+    "google-t5/t5-small":"T5Tokenizer",
+    "facebook/bart-base": "" #newly added
 }
 max_len_list ={
     "facebook/bart-large":1024,
