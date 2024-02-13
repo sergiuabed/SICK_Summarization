@@ -138,7 +138,8 @@ vocab_size_list={
     "google/peagsus-xsum":96103,
     "google/t5-large-lm-adapt":32128, 
     "google/t5-v1_1-large":32128,
-    "google-t5/t5-small":32128
+    "google-t5/t5-small":32128,
+    "facebook/bart-base": None
 }
 dataset_list = [
     "samsum","dialogsum"
