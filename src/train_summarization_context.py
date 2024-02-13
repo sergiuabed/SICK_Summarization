@@ -15,7 +15,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, SequentialSampler
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from transformers import AutoConfig, AutoModelForSeq2SeqLM
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer
 #from datasets import load_metric
@@ -238,7 +238,7 @@ finetune_args = Seq2SeqTrainingArguments(
     #warmup_ratio= ,
     warmup_steps= args.warm_up,
     save_total_limit=1,
-    fp16=False, #True,
+    fp16=True,
     seed = 516,
     load_best_model_at_end=True,
     predict_with_generate=True,
@@ -284,15 +284,29 @@ def preprocess_logits_for_metrics(logits, labels):
 
     return logits_reduced
 
-finetune_trainer = Seq2SeqTrainer(
-    model = finetune_model,
-    args = finetune_args,
-    train_dataset = train_dataset,
-    eval_dataset = eval_dataset,
-    tokenizer = tokenizer,
-    compute_metrics=compute_metrics,
-    # preprocess_logits_for_metrics=preprocess_logits_for_metrics
-)
+if args.model_name != "facebook/bart-base":
+
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
+else:
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=finetune_model)
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        data_collator=data_collator,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
 
 # Run Training (Finetuning)
 finetune_trainer.train()
