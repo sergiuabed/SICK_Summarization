@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, SequentialSampler
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from transformers import AutoConfig, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer
 from datasets import load_metric
@@ -87,7 +87,8 @@ model_checkpoint_list = [
     "google/pegasus-large",
     "google/peagsus-xsum",
     "google/t5-large-lm-adapt", 
-    "google/t5-v1_1-large"
+    "google/t5-v1_1-large",
+    "facebook/bart-base" #newly added
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -95,7 +96,8 @@ tokenizer_list = {
     "google/pegasus-large":"PegasusTokenizer",
     "google/peagsus-xsum":"PegasusTokenizer",
     "google/t5-large-lm-adapt":"T5Tokenizer", 
-    "google/t5-v1_1-large":"T5Tokenizer"
+    "google/t5-v1_1-large":"T5Tokenizer",
+    "facebook/bart-base": "" #newly added
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -111,7 +113,8 @@ vocab_size_list={
     "google/pegasus-large":96103,
     "google/peagsus-xsum":96103,
     "google/t5-large-lm-adapt":32128, 
-    "google/t5-v1_1-large":32128
+    "google/t5-v1_1-large":32128,
+    "facebook/bart-base": None
 }
 dataset_list = [
     "samsum","dialogsum","mediasum","tweetsumm"
@@ -333,15 +336,28 @@ def preprocess_logits_for_metrics(logits, labels):
 #        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
 #    )
 
-finetune_trainer = Seq2SeqTrainer(
-    model = finetune_model,
-    args = finetune_args,
-    train_dataset = train_dataset,
-    eval_dataset = eval_dataset,
-    tokenizer = tokenizer,
-    compute_metrics=compute_metrics,
-    # preprocess_logits_for_metrics=preprocess_logits_for_metrics
-)
+if args.model_name != "facebook/bart-base":
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
+else:
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=finetune_model)
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        data_collator=data_collator,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
 
 # Run Training (Finetuning)
 finetune_trainer.train()
