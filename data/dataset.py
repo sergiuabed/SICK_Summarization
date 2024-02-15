@@ -304,7 +304,7 @@ class SamsumDataset(Dataset):
                         print(f"model_inputs['labels'] shape: {model_inputs['labels'].shape}")
                         print(f"encoded_extra_supervision['input_ids'].squeeze(0) shape: {encoded_extra_supervision['input_ids'].squeeze(0).shape}")
 
-                        model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)), 1)
+                        model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)))
                 else:
                     if index==6054:
                         summary_commonsense = "problem with presentation."
