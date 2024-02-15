@@ -301,6 +301,9 @@ class SamsumDataset(Dataset):
                         model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
                     else:
                         # append extra supervision to the labels. This is used by our SICK++ implementation
+                        print(f"model_inputs['labels'] shape: {model_inputs['labels'].shape}")
+                        print(f"encoded_extra_supervision['input_ids'].squeeze(0) shape: {encoded_extra_supervision['input_ids'].squeeze(0).shape}")
+
                         model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)), 1)
                 else:
                     if index==6054:
