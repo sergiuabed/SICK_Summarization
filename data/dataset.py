@@ -368,7 +368,8 @@ class SamsumDataset_total:
 
 def custom_load_dataset(type,split):
     if type == "dialogsum":
-        dir = f"./DialogSum_Data/dialogsum.{split}.jsonl"
+        #dir = f"./DialogSum_Data/dialogsum.{split}.jsonl"
+        dir = f"../data/DialogSum_Data/dialogsum.{split}.jsonl" #changed path because in Colab we run from "SICK_summarization/src" directory
         data = {'dialogue': [],'summary':[],'id':[]}
         with open(dir, 'r') as json_file:
             json_list = list(json_file)
