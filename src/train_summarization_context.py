@@ -178,7 +178,7 @@ if args.dataset_name=='samsum':
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
 elif args.dataset_name=='dialogsum':
-    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta)
+    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta, isT5=isT5)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
