@@ -134,7 +134,7 @@ class SamsumDataset(Dataset):
                         with open(f"../data/COMET_data/paracomet/summary/samsum/sentence_transformer/paracomet_train_w.json") as f:
                             self.sentence_transformer_classified_w = json.load(f)
         
-        self.data_len = len(self.data)
+        self.data_len = len(self.id)#len(self.data)
 
         # total = [i for i in range(self.data_len)]
         # self.low_res = random.sample(total,self.data_len/10)
