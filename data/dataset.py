@@ -25,7 +25,7 @@ class SamsumDataset(Dataset):
     def __init__(self, encoder_max_len, decoder_max_len, split_type, 
                  tokenizer, extra_context=False, extra_supervision=False, 
                  paracomet=False,relation = "xReason", supervision_relation="xIntent", 
-                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum"):
+                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum", fraction_of_data=1.0):
         self.encoder_max_len = encoder_max_len
         self.decoder_max_len = decoder_max_len
         self.split_type = split_type
@@ -49,7 +49,19 @@ class SamsumDataset(Dataset):
         ##################################################
         
         self.data = load_dataset('samsum',split=split_type)
-        self.dialogue = self.data['dialogue']
+
+        total = [i for i in range(len(self.data))]
+        low_res = random.sample(total, int(len(self.data) * fraction_of_data))
+        whole_dialogue = self.data['dialogue']
+        whole_summary = self.data['summary']
+        whole_id = self.data['id']
+
+        self.dialogue = [whole_dialogue[i] for i in low_res]
+        self.summary = [whole_summary[i] for i in low_res]
+        self.id = [whole_id[i] for i in low_res]
+
+
+        #self.dialogue = self.data['dialogue']
 
         self.model_name = model_name
 
@@ -60,8 +72,8 @@ class SamsumDataset(Dataset):
 
             self.dialogue = append_prefix_dialogues(self.dialogue)
 
-        self.summary = self.data['summary']
-        self.id = self.data['id']
+        #self.summary = self.data['summary']
+        #self.id = self.data['id']
 
         self.nlp = spacy.load('en_core_web_sm')
         
@@ -350,8 +362,8 @@ class SamsumDataset_total:
     def __init__(self, encoder_max_len, decoder_max_len, tokenizer, 
                  extra_context=False, extra_supervision=False, paracomet=False,
                  relation="xReason", supervision_relation='isAfter',
-                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum"):
-        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5, model_name=model_name)#we pass 'model_name' only here because during evaluation we discard the extra decoder
+                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum", fraction_of_data=1.0):
+        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5, model_name=model_name, fraction_of_data=fraction_of_data)#we pass 'model_name' only here because during evaluation we discard the extra decoder
         self.eval_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5)
         self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5)
     
@@ -402,7 +414,7 @@ def custom_load_dataset(type,split):
 
 
 class DialogsumDataset(Dataset):
-    def __init__(self, encoder_max_len, decoder_max_len, split_type, tokenizer, extra_context=False, extra_supervision=False, paracomet=False, relation="xReason", supervision_relation="isAfter", roberta=False, sentence_transformer=False, isT5=False):
+    def __init__(self, encoder_max_len, decoder_max_len, split_type, tokenizer, extra_context=False, extra_supervision=False, paracomet=False, relation="xReason", supervision_relation="isAfter", roberta=False, sentence_transformer=False, isT5=False, fraction_of_data=1.0):
         self.encoder_max_len = encoder_max_len
         self.decoder_max_len = decoder_max_len
         self.split_type = split_type
@@ -433,7 +445,18 @@ class DialogsumDataset(Dataset):
         ##################################################
 
         self.data = custom_load_dataset('dialogsum', split=split_type)
-        self.dialogue = self.data['dialogue']
+        #self.dialogue = self.data['dialogue']
+
+        total = [i for i in range(len(self.data))]
+        low_res = random.sample(total, int(len(self.data) * fraction_of_data))
+        whole_dialogue = self.data['dialogue']
+        whole_summary = self.data['summary']
+        whole_id = self.data['id']
+
+        self.dialogue = [whole_dialogue[i] for i in low_res]
+        self.summary = [whole_summary[i] for i in low_res]
+        self.id = [whole_id[i] for i in low_res]
+
 
         if isT5 is True:
             # T5 models need in the input text a prefix specifying the
@@ -442,11 +465,11 @@ class DialogsumDataset(Dataset):
 
             self.dialogue = append_prefix_dialogues(self.dialogue)        
 
-        self.summary = self.data['summary']
+        #self.summary = self.data['summary']
         if split_type == "test":
             self.summary2 = self.data['summary2']
             self.summary3 = self.data['summary3']
-        self.id = self.data['id']
+        #self.id = self.data['id']
 
         self.nlp = spacy.load('en_core_web_sm')
         
@@ -784,8 +807,8 @@ class DialogsumDataset_total:
     def __init__(self, encoder_max_len, decoder_max_len, tokenizer, 
                  extra_context=False, extra_supervision=False, paracomet=False, 
                  relation="xReason",roberta=False,supervision_relation='isAfter', 
-                 sentence_transformer=False, isT5=False):
-        self.train_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5)
+                 sentence_transformer=False, isT5=False, fraction_of_data=1.0):
+        self.train_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
         self.eval_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5)
         self.test_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5)
         print(self.train_dataset.data_len)

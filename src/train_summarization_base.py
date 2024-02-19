@@ -63,6 +63,9 @@ parser.add_argument('--dataset_name',type=str, default='samsum')
 parser.add_argument('--use_paracomet',type=bool,default=False)
 parser.add_argument('--dataset_directory',type=str, default='./data')
 parser.add_argument('--test_output_file_name',type=str, default='samsum_base_trial2.txt')
+
+parser.add_argument('--fraction_of_data',type=float,default=1.0)
+
 args = parser.parse_args()
 
 
@@ -144,18 +147,18 @@ isT5 = True if args.model_name == "google-t5/t5-small" else False
 
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
 elif args.dataset_name=='dialogsum':
     if args.model_name=='microsoft/DialoGPT-small':
-        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.encoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5)
+        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.encoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
         train_dataset = total_dataset.getTrainData()
         eval_dataset = total_dataset.getEvalData()
         test_dataset = total_dataset.getTestData()
     else:
-        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5)
+        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
         train_dataset = total_dataset.getTrainData()
         eval_dataset = total_dataset.getEvalData()
         test_dataset = total_dataset.getTestData()

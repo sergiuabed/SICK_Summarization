@@ -65,6 +65,9 @@ parser.add_argument('--dataset_directory',type=str, default='./data')
 parser.add_argument('--test_output_file_name',type=str, default='samsum_context_trial2.txt')
 parser.add_argument('--relation',type=str,default="xReason")
 parser.add_argument('--supervision_relation',type=str,default='isAfter')
+
+parser.add_argument('--fraction_of_data',type=float,default=1.0)
+
 args = parser.parse_args()
 
 
@@ -180,12 +183,12 @@ isT5 = True if args.model_name in t5_models else False
 
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer, isT5=isT5)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
 elif args.dataset_name=='dialogsum':
-    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta, isT5=isT5)
+    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
