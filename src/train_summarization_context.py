@@ -110,7 +110,9 @@ model_checkpoint_list = [
     "google/t5-large-lm-adapt", 
     "google/t5-v1_1-large",
     "google-t5/t5-small",
-    "facebook/bart-base" #newly added
+    "facebook/bart-base", #newly added
+    "google-t5/t5-base", #newly added
+    "google-t5/t5-large" #newly added
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -120,7 +122,9 @@ tokenizer_list = {
     "google/t5-large-lm-adapt":"T5Tokenizer", 
     "google/t5-v1_1-large":"T5Tokenizer",
     "google-t5/t5-small":"T5Tokenizer",
-    "facebook/bart-base": "" #newly added
+    "facebook/bart-base": "", #newly added
+    "google-t5/t5-base": "", #newly added
+    "google-t5/t5-large": "" #newly added
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -139,7 +143,9 @@ vocab_size_list={
     "google/t5-large-lm-adapt":32128, 
     "google/t5-v1_1-large":32128,
     "google-t5/t5-small":32128,
-    "facebook/bart-base": None
+    "facebook/bart-base": None,
+    "google-t5/t5-base": None,
+    "google-t5/t5-large": None
 }
 dataset_list = [
     "samsum","dialogsum"
@@ -169,7 +175,8 @@ tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 special_tokens_dict = {'additional_special_tokens':['<I>','</I>']}
 tokenizer.add_special_tokens(special_tokens_dict)
 
-isT5 = True if args.model_name == "google-t5/t5-small" else False
+t5_models = ["google-t5/t5-small", "google-t5/t5-base", "google-t5/t5-large"]
+isT5 = True if args.model_name in t5_models else False
 
 # Set dataset
 if args.dataset_name=='samsum':
