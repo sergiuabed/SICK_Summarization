@@ -451,7 +451,7 @@ class DialogsumDataset(Dataset):
         #self.dialogue = self.data['dialogue']
 
         total = [i for i in range(len(self.data['id']))]
-        low_res = random.sample(total, int(len(self.data) * fraction_of_data))
+        low_res = random.sample(total, int(len(self.data['id']) * fraction_of_data))
         whole_dialogue = self.data['dialogue']
         whole_summary = self.data['summary']
         whole_id = self.data['id']
