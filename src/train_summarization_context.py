@@ -115,7 +115,8 @@ model_checkpoint_list = [
     "google-t5/t5-small",
     "facebook/bart-base", #newly added
     "google-t5/t5-base", #newly added
-    "google-t5/t5-large" #newly added
+    "google-t5/t5-large", #newly added
+    "lidiya/bart-large-xsum-samsum" #second extension
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -127,7 +128,8 @@ tokenizer_list = {
     "google-t5/t5-small":"T5Tokenizer",
     "facebook/bart-base": "", #newly added
     "google-t5/t5-base": "", #newly added
-    "google-t5/t5-large": "" #newly added
+    "google-t5/t5-large": "", #newly added
+    "lidiya/bart-large-xsum-samsum":"RobertaTokenizer" #second extension
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -148,7 +150,8 @@ vocab_size_list={
     "google-t5/t5-small":32128,
     "facebook/bart-base": None,
     "google-t5/t5-base": None,
-    "google-t5/t5-large": None
+    "google-t5/t5-large": None,
+    "lidiya/bart-large-xsum-samsum": None #second extension
 }
 dataset_list = [
     "samsum","dialogsum"
