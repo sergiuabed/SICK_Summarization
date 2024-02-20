@@ -50,6 +50,8 @@ class SamsumDataset(Dataset):
         
         self.data = load_dataset('samsum',split=split_type)
 
+        random.seed(a=42, version=2)
+
         total = [i for i in range(len(self.data))]
         low_res = random.sample(total, int(len(self.data) * fraction_of_data))
         whole_dialogue = self.data['dialogue']
@@ -449,6 +451,8 @@ class DialogsumDataset(Dataset):
 
         self.data = custom_load_dataset('dialogsum', split=split_type)
         #self.dialogue = self.data['dialogue']
+
+        random.seed(a=42, version=2)
 
         total = [i for i in range(len(self.data['id']))]
         low_res = random.sample(total, int(len(self.data['id']) * fraction_of_data))
