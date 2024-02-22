@@ -311,11 +311,11 @@ class SamsumDataset(Dataset):
                                                                 max_length=self.decoder_max_len,
                                                                 return_tensors='pt')
 
-                    if self.model_name == "facebook/bart-large-xsum":
-                        model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
-                    else:
+                    #if self.model_name == "facebook/bart-large-xsum":
+                    model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
+                    #else:
                         # append extra supervision to the labels. This is used by our SICK++ implementation
-                        model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)))
+                    #    model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)))
                 else:
                     if index==6054:
                         summary_commonsense = "problem with presentation."
@@ -347,11 +347,11 @@ class SamsumDataset(Dataset):
                                                                 max_length=self.decoder_max_len,
                                                                 return_tensors='pt')
 
-                    if self.model_name == "facebook/bart-large-xsum":
-                        model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
-                    else:
-                        # append extra supervision to the labels. This is used by our SICK++ implementation
-                        model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)), 1)
+                    #if self.model_name == "facebook/bart-large-xsum":
+                    model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
+                    #else:
+                    #    # append extra supervision to the labels. This is used by our SICK++ implementation
+                    #    model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)), 1)
                 # print(summary_commonsense)
             
         return model_inputs
