@@ -15,7 +15,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, SequentialSampler
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from transformers import AutoConfig, AutoModelForSeq2SeqLM
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer
 #from datasets import load_metric
@@ -42,6 +42,10 @@ parser.add_argument('--adam_beta1',type=float, default=0.9)
 parser.add_argument('--adam_beta2',type=float, default=0.999)
 parser.add_argument('--adam_eps',type=float, default=1e-12)
 parser.add_argument('--dropout_rate',type=float, default=0.1)
+
+parser.add_argument('--lr_scheduler_type',type=str, default="polynomial")
+parser.add_argument('--gradient_accumulation_steps',type=int, default=2)
+
 # Tokenizer hyperparameters
 parser.add_argument('--encoder_max_len', type=int, default=1024)
 parser.add_argument('--decoder_max_len', type=int, default=100)
@@ -61,6 +65,9 @@ parser.add_argument('--dataset_directory',type=str, default='./data')
 parser.add_argument('--test_output_file_name',type=str, default='samsum_context_trial2.txt')
 parser.add_argument('--relation',type=str,default="xReason")
 parser.add_argument('--supervision_relation',type=str,default='isAfter')
+
+parser.add_argument('--fraction_of_data',type=float,default=1.0)
+
 args = parser.parse_args()
 
 
@@ -104,7 +111,12 @@ model_checkpoint_list = [
     "google/pegasus-large",
     "google/peagsus-xsum",
     "google/t5-large-lm-adapt", 
-    "google/t5-v1_1-large"
+    "google/t5-v1_1-large",
+    "google-t5/t5-small",
+    "facebook/bart-base", #newly added
+    "google-t5/t5-base", #newly added
+    "google-t5/t5-large", #newly added
+    "lidiya/bart-large-xsum-samsum" #second extension
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -112,7 +124,12 @@ tokenizer_list = {
     "google/pegasus-large":"PegasusTokenizer",
     "google/peagsus-xsum":"PegasusTokenizer",
     "google/t5-large-lm-adapt":"T5Tokenizer", 
-    "google/t5-v1_1-large":"T5Tokenizer"
+    "google/t5-v1_1-large":"T5Tokenizer",
+    "google-t5/t5-small":"T5Tokenizer",
+    "facebook/bart-base": "", #newly added
+    "google-t5/t5-base": "", #newly added
+    "google-t5/t5-large": "", #newly added
+    "lidiya/bart-large-xsum-samsum":"RobertaTokenizer" #second extension
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -120,7 +137,8 @@ max_len_list ={
     "google/pegasus-large":1024,
     "google/peagsus-xsum":512,
     "google/t5-large-lm-adapt":512, 
-    "google/t5-v1_1-large":512
+    "google/t5-v1_1-large":512,
+    "google-t5/t5-small":512
 }
 vocab_size_list={
     "facebook/bart-large":50265,
@@ -128,7 +146,12 @@ vocab_size_list={
     "google/pegasus-large":96103,
     "google/peagsus-xsum":96103,
     "google/t5-large-lm-adapt":32128, 
-    "google/t5-v1_1-large":32128
+    "google/t5-v1_1-large":32128,
+    "google-t5/t5-small":32128,
+    "facebook/bart-base": None,
+    "google-t5/t5-base": None,
+    "google-t5/t5-large": None,
+    "lidiya/bart-large-xsum-samsum": None #second extension
 }
 dataset_list = [
     "samsum","dialogsum"
@@ -153,19 +176,22 @@ metric = load_metric("../utils/rouge.py")
 # Load Tokenizer associated to the model
 tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-# Add special token 
+# Add special token
+#if args.model_name != "google/pegasus-large":
 special_tokens_dict = {'additional_special_tokens':['<I>','</I>']}
 tokenizer.add_special_tokens(special_tokens_dict)
 
+t5_models = ["google-t5/t5-small", "google-t5/t5-base", "google-t5/t5-large"]
+isT5 = True if args.model_name in t5_models else False
 
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation,roberta=args.use_roberta, sentence_transformer=args.use_sentence_transformer, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
 elif args.dataset_name=='dialogsum':
-    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta)
+    total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,extra_context=True,paracomet=args.use_paracomet,relation=args.relation,supervision_relation=args.supervision_relation, sentence_transformer=args.use_sentence_transformer, roberta=args.use_roberta, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
@@ -192,6 +218,9 @@ finetune_model.resize_token_embeddings(len(tokenizer))
 finetune_model.gradient_checkpointing_enable()
 finetune_model = finetune_model.to(device)
 
+print(f"Train batch size: {args.train_batch_size}")
+print(f"Learning rate: {args.init_lr}")
+print(f"Scheduler: {args.lr_scheduler_type}")
 
 # Set Training Arguments (& Connect to WANDB)
 finetune_args = Seq2SeqTrainingArguments(
@@ -216,10 +245,10 @@ finetune_args = Seq2SeqTrainingArguments(
     num_train_epochs=args.epoch,
     max_grad_norm=0.1,
     #label_smoothing_factor=0.1,
-    gradient_accumulation_steps=2,
+    gradient_accumulation_steps=args.gradient_accumulation_steps,#2,
     gradient_checkpointing=True,
     # max_steps= ,
-    lr_scheduler_type='polynomial',
+    lr_scheduler_type=args.lr_scheduler_type,#'polynomial',
     #warmup_ratio= ,
     warmup_steps= args.warm_up,
     save_total_limit=1,
@@ -237,11 +266,15 @@ finetune_args = Seq2SeqTrainingArguments(
 
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
+
+    # Replace -100 in the predictions as we can't decode them.
+    predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    
+
     # Rouge expects a newline after each sentence
     decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
     decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
@@ -265,15 +298,29 @@ def preprocess_logits_for_metrics(logits, labels):
 
     return logits_reduced
 
-finetune_trainer = Seq2SeqTrainer(
-    model = finetune_model,
-    args = finetune_args,
-    train_dataset = train_dataset,
-    eval_dataset = eval_dataset,
-    tokenizer = tokenizer,
-    compute_metrics=compute_metrics,
-    # preprocess_logits_for_metrics=preprocess_logits_for_metrics
-)
+if args.model_name != "facebook/bart-base":
+
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
+else:
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=finetune_model)
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        data_collator=data_collator,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
 
 # Run Training (Finetuning)
 finetune_trainer.train()

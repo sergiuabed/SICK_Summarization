@@ -10,13 +10,22 @@ import spacy
 import re
 import random
 
+def append_prefix_dialogues(examples):
+    '''
+    T5 models deduce the task they have to perform from the prefix of
+    the input text.
+    '''
 
+    prefix = "summarize: "
+    prefixed_dialogues = [prefix + doc for doc in examples]
+
+    return prefixed_dialogues
 
 class SamsumDataset(Dataset):
     def __init__(self, encoder_max_len, decoder_max_len, split_type, 
                  tokenizer, extra_context=False, extra_supervision=False, 
                  paracomet=False,relation = "xReason", supervision_relation="xIntent", 
-                 roberta=False, sentence_transformer=False):
+                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum", fraction_of_data=1.0):
         self.encoder_max_len = encoder_max_len
         self.decoder_max_len = decoder_max_len
         self.split_type = split_type
@@ -40,9 +49,33 @@ class SamsumDataset(Dataset):
         ##################################################
         
         self.data = load_dataset('samsum',split=split_type)
-        self.dialogue = self.data['dialogue']
-        self.summary = self.data['summary']
-        self.id = self.data['id']
+
+        random.seed(a=42, version=2)
+
+        total = [i for i in range(len(self.data))]
+        low_res = random.sample(total, int(len(self.data) * fraction_of_data))
+        whole_dialogue = self.data['dialogue']
+        whole_summary = self.data['summary']
+        whole_id = self.data['id']
+
+        self.dialogue = [whole_dialogue[i] for i in low_res]
+        self.summary = [whole_summary[i] for i in low_res]
+        self.id = [whole_id[i] for i in low_res]
+
+
+        #self.dialogue = self.data['dialogue']
+
+        self.model_name = model_name
+
+        if isT5 is True:
+            # T5 models need in the input text a prefix specifying the
+            # name of the task. In our case, prefix='summarize: '
+            print("Preparing dataset for T5 model")
+
+            self.dialogue = append_prefix_dialogues(self.dialogue)
+
+        #self.summary = self.data['summary']
+        #self.id = self.data['id']
 
         self.nlp = spacy.load('en_core_web_sm')
         
@@ -103,7 +136,7 @@ class SamsumDataset(Dataset):
                         with open(f"../data/COMET_data/paracomet/summary/samsum/sentence_transformer/paracomet_train_w.json") as f:
                             self.sentence_transformer_classified_w = json.load(f)
         
-        self.data_len = len(self.data)
+        self.data_len = len(self.id)#len(self.data)
 
         # total = [i for i in range(self.data_len)]
         # self.low_res = random.sample(total,self.data_len/10)
@@ -129,6 +162,25 @@ class SamsumDataset(Dataset):
             else:
                 return "" 
 
+    def process_media_msg_old(self,sentence, person, commonsense):
+        # print(person)
+        if ('<file_photo>' in sentence) or ('<photo_file>' in sentence) or ('<file_picture>' in sentence):
+            return person + " sent a photo." + '\n' 
+        elif ('<video>' in sentence) or ('<file_video>' in sentence):
+            return person + " sent a video." + '\n'
+        elif '<file_gif>' in sentence:
+            return person + " sent a file." + '\n'
+        elif ('<file_other>' in sentence) or ('<file_others>' in sentence):
+            return person + " sent a file." + '\n'
+        elif ('<link>' in sentence) or ('<file_link>' in sentence):
+            return person + " sent a link." + '\n'
+        elif '<location>' in sentence:
+            return person + " sent a location." + '\n'
+        else:
+            if commonsense.strip() != 'none':
+                return commonsense.strip() + "." + '\n'
+            else:
+                return ""
 
     def __len__(self):
         return self.data_len
@@ -259,7 +311,11 @@ class SamsumDataset(Dataset):
                                                                 max_length=self.decoder_max_len,
                                                                 return_tensors='pt')
 
+                    #if self.model_name == "facebook/bart-large-xsum":
                     model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
+                    #else:
+                        # append extra supervision to the labels. This is used by our SICK++ implementation
+                    #    model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)))
                 else:
                     if index==6054:
                         summary_commonsense = "problem with presentation."
@@ -291,7 +347,11 @@ class SamsumDataset(Dataset):
                                                                 max_length=self.decoder_max_len,
                                                                 return_tensors='pt')
 
+                    #if self.model_name == "facebook/bart-large-xsum":
                     model_inputs['extra_labels'] = encoded_extra_supervision['input_ids'].squeeze(0)
+                    #else:
+                    #    # append extra supervision to the labels. This is used by our SICK++ implementation
+                    #    model_inputs['labels'] = torch.cat((model_inputs['labels'], encoded_extra_supervision['input_ids'].squeeze(0)), 1)
                 # print(summary_commonsense)
             
         return model_inputs
@@ -304,14 +364,18 @@ class SamsumDataset_total:
     def __init__(self, encoder_max_len, decoder_max_len, tokenizer, 
                  extra_context=False, extra_supervision=False, paracomet=False,
                  relation="xReason", supervision_relation='isAfter',
-                 roberta=False, sentence_transformer=False):
-        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
-        self.eval_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
-        self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer)
+                 roberta=False, sentence_transformer=False, isT5=False, model_name="facebook/bart-large-xsum", fraction_of_data=1.0):
+
+        #eval_fraction = 1.0 if fraction_of_data == 1.0 else 0.5
+        
+        self.train_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5, model_name=model_name, fraction_of_data=fraction_of_data)#we pass 'model_name' only here because during evaluation we discard the extra decoder
+        self.eval_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
+        self.test_dataset = SamsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context=extra_context,extra_supervision=extra_supervision,paracomet=paracomet,relation=relation, supervision_relation=supervision_relation, roberta=roberta, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
     
     def getTrainData(self):
         return self.train_dataset
-    
+        #return self.eval_dataset
+
     def getEvalData(self):
         return self.eval_dataset
 
@@ -321,7 +385,8 @@ class SamsumDataset_total:
 
 def custom_load_dataset(type,split):
     if type == "dialogsum":
-        dir = f"./DialogSum_Data/dialogsum.{split}.jsonl"
+        #dir = f"./DialogSum_Data/dialogsum.{split}.jsonl"
+        dir = f"../data/DialogSum_Data/dialogsum.{split}.jsonl" #changed path because in Colab we run from "SICK_summarization/src" directory
         data = {'dialogue': [],'summary':[],'id':[]}
         with open(dir, 'r') as json_file:
             json_list = list(json_file)
@@ -354,7 +419,7 @@ def custom_load_dataset(type,split):
 
 
 class DialogsumDataset(Dataset):
-    def __init__(self, encoder_max_len, decoder_max_len, split_type, tokenizer, extra_context=False, extra_supervision=False, paracomet=False, relation="xReason", supervision_relation="isAfter", roberta=False, sentence_transformer=False):
+    def __init__(self, encoder_max_len, decoder_max_len, split_type, tokenizer, extra_context=False, extra_supervision=False, paracomet=False, relation="xReason", supervision_relation="isAfter", roberta=False, sentence_transformer=False, isT5=False, fraction_of_data=1.0):
         self.encoder_max_len = encoder_max_len
         self.decoder_max_len = decoder_max_len
         self.split_type = split_type
@@ -385,12 +450,33 @@ class DialogsumDataset(Dataset):
         ##################################################
 
         self.data = custom_load_dataset('dialogsum', split=split_type)
-        self.dialogue = self.data['dialogue']
-        self.summary = self.data['summary']
+        #self.dialogue = self.data['dialogue']
+
+        random.seed(a=42, version=2)
+
+        total = [i for i in range(len(self.data['id']))]
+        low_res = random.sample(total, int(len(self.data['id']) * fraction_of_data))
+        whole_dialogue = self.data['dialogue']
+        whole_summary = self.data['summary']
+        whole_id = self.data['id']
+
+        self.dialogue = [whole_dialogue[i] for i in low_res]
+        self.summary = [whole_summary[i] for i in low_res]
+        self.id = [whole_id[i] for i in low_res]
+
+
+        if isT5 is True:
+            # T5 models need in the input text a prefix specifying the
+            # name of the task. In our case, prefix='summarize: '
+            print("Preparing dataset for T5 model")
+
+            self.dialogue = append_prefix_dialogues(self.dialogue)        
+
+        #self.summary = self.data['summary']
         if split_type == "test":
             self.summary2 = self.data['summary2']
             self.summary3 = self.data['summary3']
-        self.id = self.data['id']
+        #self.id = self.data['id']
 
         self.nlp = spacy.load('en_core_web_sm')
         
@@ -728,10 +814,10 @@ class DialogsumDataset_total:
     def __init__(self, encoder_max_len, decoder_max_len, tokenizer, 
                  extra_context=False, extra_supervision=False, paracomet=False, 
                  relation="xReason",roberta=False,supervision_relation='isAfter', 
-                 sentence_transformer=False):
-        self.train_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer)
-        self.eval_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer)
-        self.test_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer)
+                 sentence_transformer=False, isT5=False, fraction_of_data=1.0):
+        self.train_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'train',tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
+        self.eval_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'validation', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
+        self.test_dataset = DialogsumDataset(encoder_max_len, decoder_max_len, 'test', tokenizer,extra_context,extra_supervision,paracomet=paracomet,relation=relation,roberta=roberta,supervision_relation=supervision_relation, sentence_transformer=sentence_transformer, isT5=isT5, fraction_of_data=fraction_of_data)
         print(self.train_dataset.data_len)
     def getTrainData(self):
         return self.train_dataset

@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, SequentialSampler
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from transformers import AutoConfig, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer
 from datasets import load_metric
@@ -44,6 +44,10 @@ parser.add_argument('--adam_beta1',type=float, default=0.9)
 parser.add_argument('--adam_beta2',type=float, default=0.999)
 parser.add_argument('--adam_eps',type=float, default=1e-12)
 parser.add_argument('--dropout_rate',type=float, default=0.1)
+
+parser.add_argument('--lr_scheduler_type',type=str, default="polynomial")
+parser.add_argument('--gradient_accumulation_steps',type=int, default=2)
+
 # Tokenizer hyperparameters
 parser.add_argument('--encoder_max_len', type=int, default=1024)
 parser.add_argument('--decoder_max_len', type=int, default=100)
@@ -59,6 +63,9 @@ parser.add_argument('--dataset_name',type=str, default='samsum')
 parser.add_argument('--use_paracomet',type=bool,default=False)
 parser.add_argument('--dataset_directory',type=str, default='./data')
 parser.add_argument('--test_output_file_name',type=str, default='samsum_base_trial2.txt')
+
+parser.add_argument('--fraction_of_data',type=float,default=1.0)
+
 args = parser.parse_args()
 
 
@@ -73,7 +80,7 @@ print('######################################################################')
 
 
 # Start WANDB Log (Set Logging API)
-wandb.init(project="ICSK4AS", reinit=True, entity='icsk4as')
+wandb.init(project="ICSK4AS", reinit=True, entity='s295149')
 wandb.run.name = f"base_{args.dataset_name}_{'para' if args.use_paracomet else ''}_lr{str(args.init_lr)}"
 
 # Define Global Values
@@ -83,7 +90,8 @@ model_checkpoint_list = [
     "google/pegasus-large",
     "google/peagsus-xsum",
     "google/t5-large-lm-adapt", 
-    "google/t5-v1_1-large"
+    "google/t5-v1_1-large",
+    "facebook/bart-base" #newly added
 ]
 tokenizer_list = {
     "facebook/bart-large":"RobertaTokenizer",
@@ -91,7 +99,8 @@ tokenizer_list = {
     "google/pegasus-large":"PegasusTokenizer",
     "google/peagsus-xsum":"PegasusTokenizer",
     "google/t5-large-lm-adapt":"T5Tokenizer", 
-    "google/t5-v1_1-large":"T5Tokenizer"
+    "google/t5-v1_1-large":"T5Tokenizer",
+    "facebook/bart-base": "" #newly added
 }
 max_len_list ={
     "facebook/bart-large":1024,
@@ -107,7 +116,8 @@ vocab_size_list={
     "google/pegasus-large":96103,
     "google/peagsus-xsum":96103,
     "google/t5-large-lm-adapt":32128, 
-    "google/t5-v1_1-large":32128
+    "google/t5-v1_1-large":32128,
+    "facebook/bart-base": None
 }
 dataset_list = [
     "samsum","dialogsum","mediasum","tweetsumm"
@@ -133,20 +143,22 @@ tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 if args.model_name == 'microsoft/DialoGPT-small':
     tokenizer.add_special_tokens({'pad_token':tokenizer.eos_token})
 
+isT5 = True if args.model_name == "google-t5/t5-small" else False
+
 # Set dataset
 if args.dataset_name=='samsum':
-    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet)
+    total_dataset = SamsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
     train_dataset = total_dataset.getTrainData()
     eval_dataset = total_dataset.getEvalData()
     test_dataset = total_dataset.getTestData()
 elif args.dataset_name=='dialogsum':
     if args.model_name=='microsoft/DialoGPT-small':
-        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.encoder_max_len,tokenizer,paracomet=args.use_paracomet)
+        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.encoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
         train_dataset = total_dataset.getTrainData()
         eval_dataset = total_dataset.getEvalData()
         test_dataset = total_dataset.getTestData()
     else:
-        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet)
+        total_dataset = DialogsumDataset_total(args.encoder_max_len,args.decoder_max_len,tokenizer,paracomet=args.use_paracomet, isT5=isT5, fraction_of_data=args.fraction_of_data)
         train_dataset = total_dataset.getTrainData()
         eval_dataset = total_dataset.getEvalData()
         test_dataset = total_dataset.getTestData()
@@ -190,6 +202,47 @@ finetune_model = finetune_model.to(device)
 
 
 # Set Training Arguments (& Connect to WANDB)
+#finetune_args = Seq2SeqTrainingArguments(
+#    output_dir = args.finetune_weight_path,
+#    overwrite_output_dir = True,
+#    do_train=True,
+#    do_eval=True,
+#    do_predict=True,
+#    evaluation_strategy='epoch',
+#    #eval_steps=args.display_step,
+#    per_device_train_batch_size = args.train_batch_size,
+#    per_device_eval_batch_size = args.val_batch_size,
+#    learning_rate=args.init_lr,
+#    weight_decay=args.weight_decay,
+#    # adam_beta1=args.adam_beta1,
+#    # adam_beta2=args.adam_beta2,
+#    # adam_epsilon=args.adam_eps,
+#    num_train_epochs=args.epoch,
+#    max_grad_norm=0.1,
+#    label_smoothing_factor=0.1,
+#    gradient_accumulation_steps=2,
+#    # gradient_checkpointing=True,
+#    # max_steps= ,
+#    lr_scheduler_type=args.lr_scheduler_type,#'polynomial',
+#    #warmup_ratio= ,
+#    warmup_steps= args.warm_up,
+#    logging_strategy="epoch",
+#    #logging_steps=args.display_step,
+#    save_strategy= "epoch",
+#    #save_steps=args.display_step,
+#    save_total_limit=1,
+#    fp16=False,#True,
+#    seed = 42,
+#    load_best_model_at_end=True,
+#    predict_with_generate=True,
+#    prediction_loss_only=False,
+#    generation_max_length= 1023 if args.model_name=='microsoft/DialoGPT-small' else 100,
+#    generation_num_beams=5,
+#    metric_for_best_model='eval_rouge2',
+#    greater_is_better=True,
+#    report_to = 'wandb',
+#)
+
 finetune_args = Seq2SeqTrainingArguments(
     output_dir = args.finetune_weight_path,
     overwrite_output_dir = True,
@@ -197,43 +250,47 @@ finetune_args = Seq2SeqTrainingArguments(
     do_eval=True,
     do_predict=True,
     evaluation_strategy='epoch',
-    #eval_steps=args.display_step,
+    logging_strategy="epoch",
+    save_strategy= "epoch",
+    # eval_steps=1,
+    # logging_steps=1,
+    # save_steps=1,
     per_device_train_batch_size = args.train_batch_size,
     per_device_eval_batch_size = args.val_batch_size,
     learning_rate=args.init_lr,
     weight_decay=args.weight_decay,
-    # adam_beta1=args.adam_beta1,
-    # adam_beta2=args.adam_beta2,
-    # adam_epsilon=args.adam_eps,
+    adam_beta1=args.adam_beta1,
+    adam_beta2=args.adam_beta2,
+    adam_epsilon=args.adam_eps,
     num_train_epochs=args.epoch,
     max_grad_norm=0.1,
-    label_smoothing_factor=0.1,
-    gradient_accumulation_steps=2,
-    # gradient_checkpointing=True,
+    #label_smoothing_factor=0.1,
+    gradient_accumulation_steps=args.gradient_accumulation_steps,#2,
+    gradient_checkpointing=True,
     # max_steps= ,
-    lr_scheduler_type='polynomial',
+    lr_scheduler_type=args.lr_scheduler_type,#'polynomial',
     #warmup_ratio= ,
     warmup_steps= args.warm_up,
-    logging_strategy="epoch",
-    #logging_steps=args.display_step,
-    save_strategy= "epoch",
-    #save_steps=args.display_step,
     save_total_limit=1,
-    fp16=True,
-    seed = 42,
+    fp16=False, #True,
+    seed = 516,
     load_best_model_at_end=True,
     predict_with_generate=True,
     prediction_loss_only=False,
-    generation_max_length= 1023 if args.model_name=='microsoft/DialoGPT-small' else 100,
+    generation_max_length=100,
     generation_num_beams=5,
-    metric_for_best_model='eval_rouge2',
+    metric_for_best_model='eval_rouge1',
     greater_is_better=True,
     report_to = 'wandb',
 )
 
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
+
+    # Replace -100 in the predictions as we can't decode them.
+    predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
@@ -260,18 +317,29 @@ def preprocess_logits_for_metrics(logits, labels):
 
     return logits_reduced
 
-if args.model_name in ['microsoft/DialoGPT-small','google/pegasus-large','facebook/bart-large']:
-    finetune_trainer = DialoGPTTrainer(
-        model = finetune_model,
-        args = finetune_args,
-        train_dataset = train_dataset,
-        eval_dataset = eval_dataset,
-        tokenizer = tokenizer,
-        compute_metrics=compute_metrics,
-        #preprocess_logits_for_metrics=preprocess_logits_for_metrics
-    )
+#if args.model_name in ['microsoft/DialoGPT-small','google/pegasus-large','facebook/bart-large']:
+#    finetune_trainer = DialoGPTTrainer(
+#        model = finetune_model,
+#        args = finetune_args,
+#        train_dataset = train_dataset,
+#        eval_dataset = eval_dataset,
+#        tokenizer = tokenizer,
+#        compute_metrics=compute_metrics,
+#        #preprocess_logits_for_metrics=preprocess_logits_for_metrics
+#    )
+#
+#else:
+#    finetune_trainer = Seq2SeqTrainer(
+#        model = finetune_model,
+#        args = finetune_args,
+#        train_dataset = train_dataset,
+#        eval_dataset = eval_dataset,
+#        tokenizer = tokenizer,
+#        compute_metrics=compute_metrics,
+#        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+#    )
 
-else:
+if args.model_name != "facebook/bart-base":
     finetune_trainer = Seq2SeqTrainer(
         model = finetune_model,
         args = finetune_args,
@@ -281,7 +349,18 @@ else:
         compute_metrics=compute_metrics,
         # preprocess_logits_for_metrics=preprocess_logits_for_metrics
     )
-
+else:
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=finetune_model)
+    finetune_trainer = Seq2SeqTrainer(
+        model = finetune_model,
+        args = finetune_args,
+        train_dataset = train_dataset,
+        eval_dataset = eval_dataset,
+        data_collator=data_collator,
+        tokenizer = tokenizer,
+        compute_metrics=compute_metrics,
+        # preprocess_logits_for_metrics=preprocess_logits_for_metrics
+    )
 
 # Run Training (Finetuning)
 finetune_trainer.train()
